@@ -1,0 +1,227 @@
+import pandas as pd
+import numpy as np
+import plotly.express as px
+from statsmodels.tsa.stattools import adfuller
+from statsmodels.tsa.stattools import kpss
+from statsmodels.tsa.api import VAR
+from statsmodels.tsa.stattools import grangercausalitytests
+import csv
+
+
+#ADF Function
+def adf_test(file):
+   result = adfuller(file.values)
+   print('ADF Statistics: %f' % result[0])
+   print('p-value: %f' % result[1])
+   print('Critical values:')
+   for key, value in result[4].items():
+      print('\t%s: %.3f' % (key, value))
+
+#kpss Function
+def kpss_test(file):    
+    statistic, p_value, n_lags, critical_values = kpss(file.values)
+    
+    print(f'KPSS Statistic: {statistic}')
+    print(f'p-value: {p_value}')
+    print(f'num lags: {n_lags}')
+    print('Critial Values:')
+    for key, value in critical_values.items():
+        print(f'   {key} : {value}')
+
+
+##Data Type + File Write
+
+df = pd.read_csv('/Users/klaustan/Documents/Folder Storage/Work/College/Work/combined_latents.csv', delim_whitespace=True, header = None)
+df_tmp = pd.DataFrame(index=np.arange(255), columns=np.arange(1024))
+
+df = df.T
+
+r3 = 0
+while r3 < 1024:
+
+    expanded_data = df.iloc[:, r3].str.split(',', expand=True)
+    expanded_data = expanded_data.apply(pd.to_numeric, errors='coerce')
+
+    expanded_data = expanded_data.T
+    df_tmp[r3] = expanded_data[0]
+
+    r3 += 1
+
+df_tmp = df_tmp.T
+df_tmp = df_tmp.astype(float)
+
+#Automation, repeat 1, 2, 4, 8, 16, 32, 64, 128
+n=0
+l=0
+
+while n < 8:
+
+    #Reset to original data
+    df_1 = pd.DataFrame(index = np.arange(1024), columns = np.arange(pow(2,n)))
+
+    ##resets m to 0
+    m = 0
+
+    ##reset p, which is how many columns the fucntions compares, to 0
+    p = 0
+
+    while m < pow(2,n):
+
+        ##note: l will increase together with the function, reaching 255
+        df_1[m] = df_tmp[l]
+        df_1[m] = df_1[m].astype(float)
+
+        m += 1
+        
+        l += 1
+
+        print(m)
+        print(l)
+
+    #this number is 1, 2, 4, 8, 16...
+    p = m
+
+    print("M is: ")
+    print(m)
+    print("N is: ")
+    print(n)
+    print("P is: ")
+    print(p)
+    print("L is: ")
+    print(l)
+
+
+
+    ##df_long conversion
+    '''if n == 0:
+        # Melt the DataFrame to convert it into long-form
+        df_long = pd.melt(df_1, id_vars=df_1.columns[0], var_name='variable', value_name='value')
+
+    elif n == 1:
+        df_long = pd.melt(df_1, id_vars=df_1.columns[0, 1], var_name='variable', value_name='value')
+
+    elif n == 2:
+        df_long = pd.melt(df_1, id_vars=df_1.columns[0, 1, 2, 3, 4, 5, 6, 7], var_name='variable', value_name='value')
+
+    elif n == 3:
+        df_long = pd.melt(df_1, id_vars=df_1.columns[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], var_name='variable', value_name='value')
+
+    elif n == 4:
+        df_long = pd.melt(df_1, id_vars=df_1.columns[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31], var_name='variable', value_name='value')
+
+    elif n == 5:
+        df_long = pd.melt(df_1, id_vars=df_1.columns[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63
+], var_name='variable', value_name='value')
+        
+    else:
+        df_long = pd.melt(df_1, id_vars=df_1.columns[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127
+], var_name='variable', value_name='value')
+
+    #Graph, no need to repeat
+    fig = px.line(df_long, facet_col_wrap=1)
+    fig.update_yaxes(matches=None)
+    fig.show()'''
+    
+
+
+    #repeat p times
+    r1 = 0
+    r2 = 0
+
+    #Store l as a char
+    turns_1 = chr(l)
+
+    while r1 < pow(2,n):
+        #ADF Test
+        print("ADF Test: " + turns_1 + "time series")
+        adf_test(df_1.iloc[:, r1])
+        
+
+        #kpss Test
+        print("KPSS Test: " + turns_1 + " time series")
+        kpss_test(df_1.iloc[:, r1])
+
+
+        print("r1 is: ")
+        print(r1)
+        
+        r1 += 1
+
+    '''#Equalized Graph
+    print("\nEqualized Graph")'''
+    df_1_equalized = df_1.diff().dropna()
+
+    '''fig = px.line(df_1_equalized, facet_col_wrap=1)
+    fig.update_yaxes(matches=None)
+    fig.show()'''
+
+    #Avg IC value list
+    IC_list = []
+    Lag_num = 0
+
+    if n == 0:
+        pass
+    else:
+        #VAR test
+        model = VAR(df_1_equalized)
+        for laggy in [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]:
+            result = model.fit(laggy)
+            print('Lag Order =', laggy)
+            print('AIC : ', result.aic)
+            print('BIC : ', result.bic)
+            print('FPE : ', result.fpe)
+            print('HQIC: ', result.hqic, '\n')
+
+        #Automation for avg and selection
+        AIC_val = result.aic
+        BIC_val = result.bic
+        FPE_val = result.fpe
+        HQIC_val = result.hqic
+        Avg = (AIC_val + BIC_val + FPE_val + HQIC_val)/4
+
+        IC_list.append(Avg)
+
+
+        #Need to select correct Lag Order, 
+        x = 100
+        for lagVar in range(len(IC_list)):
+            if x > IC_list[lagVar]:
+                x = IC_list[lagVar]
+                Lag_num = lagVar+1
+            else:
+                pass
+
+
+        #Modelling
+        model.select_order(Lag_num)
+
+        results = model.fit(maxlags=Lag_num, ic='aic')
+        results.summary()
+
+
+        #Granger Causality Test
+        maxlag=Lag_num
+        test = 'ssr_chi2test'
+
+        def grangers_causation_matrix(data, variables, test='ssr_chi2test', verbose=False):    
+            
+            df = pd.DataFrame(np.zeros((len(variables), len(variables))), columns=variables, index=variables)
+            for c in df.columns:
+                for r in df.index:
+                    test_result = grangercausalitytests(data[[r, c]], maxlag=maxlag, verbose=False)
+                    p_values = [round(test_result[i+1][0][test][1],4) for i in range(maxlag)]
+                    if verbose: print(f'Y = {r}, X = {c}, P Values = {p_values}')
+                    min_p_value = np.min(p_values)
+                    df.loc[r, c] = min_p_value
+            df.columns = [var for var in variables]
+            df.index = [var for var in variables]
+            print(df)
+            return df
+
+        grangers_causation_matrix(df_1, variables = df_1.columns)
+        
+        n += 1
+
+    n += 1
+
+
